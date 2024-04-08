@@ -29,19 +29,21 @@
 using namespace gazebo;
 
 template <typename T>
-std::shared_ptr<T> GetAndCheckSensor(sensors::SensorManager *smanager, std::string name) {
-  const gazebo::sensors::SensorPtr s = smanager->GetSensor(name);
-  if (s == NULL) {
-    std::cerr << "RealSensePlugin: Sensor '" << name << "' not found. Available sensor are:" << std::endl;
-    const auto sensors = smanager->GetSensors();
-    for (const auto& sensor : sensors) {
-      std::cerr << "\t" << sensor->Name() << std::endl;
+std::shared_ptr<T> GetAndCheckSensor(sensors::SensorManager *smanager, std::string name)
+{
+    const gazebo::sensors::SensorPtr s = smanager->GetSensor(name);
+    if (s == NULL)
+    {
+        std::cerr << "RealSensePlugin: Sensor '" << name << "' not found. Available sensor are:" << std::endl;
+        const auto sensors = smanager->GetSensors();
+        for (const auto &sensor : sensors)
+        {
+            std::cerr << "\t" << sensor->Name() << std::endl;
+        }
+        return NULL;
     }
-    return NULL;
-  }
-  return std::dynamic_pointer_cast<T>(s);
+    return std::dynamic_pointer_cast<T>(s);
 }
-
 
 /////////////////////////////////////////////////
 RealSensePlugin::RealSensePlugin()
@@ -144,50 +146,71 @@ void RealSensePlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
                          smanager->GetSensor(prefix + DEPTH_CAMERA_NAME))
                          ->DepthCamera();
 
-  // Get Cameras Renderers
-  sensors::DepthCameraSensorPtr depth_cs = GetAndCheckSensor<sensors::DepthCameraSensor>(smanager, std::string(prefix + DEPTH_CAMERA_NAME));
-  if (depth_cs) {
-    this->depthCam = depth_cs->DepthCamera();
-  }
-  sensors::CameraSensorPtr ired1_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + IRED1_CAMERA_NAME));
-  if (ired1_cs) {
-    this->ired1Cam = ired1_cs->Camera();
-  }
-  sensors::CameraSensorPtr ired2_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + IRED2_CAMERA_NAME));
-  if (ired2_cs) {
-    this->ired2Cam = ired2_cs->Camera();
-  }
-  sensors::CameraSensorPtr color_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + COLOR_CAMERA_NAME));
-  if (color_cs) {
-    this->colorCam = color_cs->Camera();
-  }
+    // Get Cameras Renderers
+    sensors::DepthCameraSensorPtr depth_cs = GetAndCheckSensor<sensors::DepthCameraSensor>(smanager, std::string(prefix + DEPTH_CAMERA_NAME));
+    if (depth_cs)
+    {
+        this->depthCam = depth_cs->DepthCamera();
+    }
+    sensors::CameraSensorPtr ired1_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + IRED1_CAMERA_NAME));
+    if (ired1_cs)
+    {
+        this->ired1Cam = ired1_cs->Camera();
+    }
+    sensors::CameraSensorPtr ired2_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + IRED2_CAMERA_NAME));
+    if (ired2_cs)
+    {
+        this->ired2Cam = ired2_cs->Camera();
+    }
+    sensors::CameraSensorPtr color_cs = GetAndCheckSensor<sensors::CameraSensor>(smanager, std::string(prefix + COLOR_CAMERA_NAME));
+    if (color_cs)
+    {
+        this->colorCam = color_cs->Camera();
+    }
 
-  bool abort{false};
-  // Check if camera renderers have been found successfuly
-  if (!this->depthCam) {
-    std::cerr << "RealSensePlugin: Depth Camera has not been found"
-              << std::endl;
-    abort = true;
-  }
-  if (!this->ired1Cam) {
-    std::cerr << "RealSensePlugin: InfraRed Camera 1 has not been found"
-              << std::endl;
-    abort = true;
-  }
-  if (!this->ired2Cam) {
-    std::cerr << "RealSensePlugin: InfraRed Camera 2 has not been found"
-              << std::endl;
-    abort = true;
-  }
-  if (!this->colorCam) {
-    std::cerr << "RealSensePlugin: Color Camera has not been found"
-              << std::endl;
-    abort = true;
-  }
-  if (abort) {
-    std::cerr << "RealSensePlugin: Aborting loading" << std::endl;
-    return;
-  }
+    bool abort{false};
+    // Check if camera renderers have been found successfuly
+    if (!this->depthCam)
+    {
+        std::cerr << "RealSensePlugin: Depth Camera has not been found"
+                  << std::endl;
+        abort = true;
+    }
+    if (!this->ired1Cam)
+    {
+        std::cerr << "RealSensePlugin: InfraRed Camera 1 has not been found"
+                  << std::endl;
+        abort = true;
+    }
+    if (!this->ired2Cam)
+    {
+        std::cerr << "RealSensePlugin: InfraRed Camera 2 has not been found"
+                  << std::endl;
+        abort = true;
+    }
+    if (!this->colorCam)
+    {
+        std::cerr << "RealSensePlugin: Color Camera has not been found"
+                  << std::endl;
+        abort = true;
+    }
+    if (abort)
+    {
+        std::cerr << "RealSensePlugin: Aborting loading" << std::endl;
+        return;
+    }
+
+    try
+    {
+        this->depthMap.resize(this->depthCam->ImageWidth() *
+                              this->depthCam->ImageHeight());
+    }
+    catch (std::bad_alloc &e)
+    {
+        std::cerr << "RealSensePlugin: depthMap allocation failed: " << e.what()
+                  << std::endl;
+        return;
+    }
 
     // Setup Transport Node
     this->transportNode = transport::NodePtr(new transport::Node());
